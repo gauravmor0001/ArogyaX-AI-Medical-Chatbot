@@ -18,6 +18,7 @@ __pycache__/
 # Chroma DB
 chroma_db/
 
+
 # Distribution / packaging
 build/
 dist/
@@ -25,3 +26,5 @@ dist/
 
 # Logs
 *.log
+
+medical_rag_chromadb (1).ipynb
