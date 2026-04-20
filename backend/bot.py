@@ -3,47 +3,35 @@ from dotenv import load_dotenv
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
-from langchain_classic.chains import create_retrieval_chain #takes user input → fetches relevant docs → passes both to LLM
+from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-# create_stuff_documents_chain: "stuffs" all retrieved document chunks
-# into the prompt as a single context block for the LLM to read
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder # ChatPromptTemplate: builds structured prompts with system + human message roles
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
-# StrOutputParser: extracts plain string text from the LLM's response object
-# LLM returns an AIMessage object, this converts it to a simple string
 from langchain_core.messages import HumanMessage, AIMessage
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import List
 
 load_dotenv()
+router = APIRouter()
+
 print("Waking up the medical assistant...")
+
 embedding_model = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2",
     encode_kwargs={'normalize_embeddings': True},
 )
-# import chromadb
-# client = chromadb.PersistentClient(path="./chroma_db")
-# print("🔍 Collections found in database:")
-# for collection in client.list_collections():
-#     print(f" - {collection.name}")
 
 vectorstore = Chroma(
-    persist_directory="./chroma_db",
+    persist_directory="../chroma_db",
     collection_name="medical_books_15",
     embedding_function=embedding_model,
 )
 print(f"📦 Total chunks in DB: {vectorstore._collection.count()}")
+
 retriever = vectorstore.as_retriever(
     search_type="mmr",
-    # mmr = Maximum Marginal Relevance
-    # instead of returning the 5 most similar chunks (which can be repetitive),
-    # MMR balances relevance AND diversity — avoids returning near-duplicate chunks
-    # example: without MMR you might get 5 chunks all saying the same thing about fever
-    
-    search_kwargs={
-        'k': 5,
-        'fetch_k': 20
-        # fetch_k: ChromaDB first fetches 20 candidates by similarity,
-        # then MMR picks the best 5 from those 20 (diverse + relevant)
-    }
+    search_kwargs={'k': 5, 'fetch_k': 20}
 )
 
 llm = ChatGroq(
@@ -51,6 +39,7 @@ llm = ChatGroq(
     temperature=0.2,
     max_tokens=1024,
 )
+
 chat_history = []
 
 rewrite_prompt = ChatPromptTemplate.from_messages([
@@ -67,10 +56,6 @@ rewrite_prompt = ChatPromptTemplate.from_messages([
     ("human", "{input}"),
 ])
 rewriter = rewrite_prompt | llm | StrOutputParser()
-# this is a LangChain LCEL pipeline (|  = pipe operator, like Linux)
-# step 1: rewrite_prompt formats the user input into the prompt template
-# step 2: llm generates the rewritten query
-# step 3: StrOutputParser strips it to a plain string
 
 casual_prompt = ChatPromptTemplate.from_messages([
     ("system",
@@ -83,7 +68,6 @@ casual_prompt = ChatPromptTemplate.from_messages([
 ])
 casual_chain = casual_prompt | llm | StrOutputParser()
 
-
 system_prompt = (
     "You are a professional, empathetic medical AI assistant speaking directly to a user. "
     "You are equipped with a highly accurate medical database. Use ONLY the provided excerpts to answer. "
@@ -95,70 +79,76 @@ system_prompt = (
     "Textbook Excerpts:\n{context}"
 )
 
-
 prompt = ChatPromptTemplate.from_messages([
     ("system", system_prompt),
     ("human", "{input}"),
 ])
 
 question_answer_chain = create_stuff_documents_chain(llm, prompt)
-# combines the LLM + prompt into one unit
-# when called, it stuffs all retrieved chunks into {context} and runs the prompt
-
 rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
-print("System Ready! Type 'exit' or 'quit' to stop.\n")
-print("-" * 50)
 
-while True:
-    user_input = input("\nYOU: ")
-    
-    if user_input.lower() in ['exit', 'quit']:
-        print("Goodbye! Stay healthy.")
-        break
-        
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
+    sources: List[str]  # empty list for casual, filled for medical
+
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(req: ChatRequest):
+    global chat_history
+
+    user_input = req.message
+
     if not user_input.strip():
-        continue
-        
+        return ChatResponse(reply="Please enter a message.", sources=[])
+
+    print(f"\nReceived: {user_input}")
     print("Bot is thinking...")
-    
-    better_query = rewriter.invoke({"input": user_input, "chat_history": chat_history})
+
+    better_query = rewriter.invoke({
+        "input": user_input,
+        "chat_history": chat_history
+    })
+
+    sources = []  # default empty — only populated on medical path
+
     if better_query.strip() == "ROUTE_TO_CHAT":
-        # ── CASUAL PATH: no vector search, no sources ─────────────────
         print("💬 Routing to casual chat...")
         answer = casual_chain.invoke({
             "input": user_input,
             "chat_history": chat_history
         })
-        print(f"\n BOT: {answer}")
-        # no sources block here — nothing was retrieved
+        # sources stays empty []
 
     else:
-        # ── MEDICAL PATH: vector search + RAG ─────────────────────────
         print(f"🔍 Searching for: {better_query}")
         response = rag_chain.invoke({
             "input": better_query,
             "chat_history": chat_history
         })
         answer = response["answer"]
-        print(f"\n BOT: {answer}")
 
-        # sources only shown on medical path
-        print("\n📚 Sources used:")
+        # build deduplicated sources list
         unique_sources = set()
         for doc in response["context"]:
             book_title = doc.metadata.get('book_title', 'Unknown Source')
             page = doc.metadata.get('page', '?')
-            unique_sources.add(f"  - {book_title} (Page {page})")
-        for source in unique_sources:
-            print(source)
+            unique_sources.add(f"{book_title} (Page {page})")
+        sources = list(unique_sources)
 
-    # STEP 3: Update memory regardless of which path was taken
+    # update memory
     chat_history.append(HumanMessage(content=user_input))
     chat_history.append(AIMessage(content=answer))
 
     if len(chat_history) > 20:
         chat_history = chat_history[-20:]
 
+    print(f"\nBOT: {answer}")
+    print(f"Sources: {sources}")
     print("-" * 50)
-    print("\n DISCLAIMER: I am an AI, not a doctor. This is for educational purposes only.")
+
+    return ChatResponse(reply=answer, sources=sources)

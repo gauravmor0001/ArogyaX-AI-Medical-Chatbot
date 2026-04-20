@@ -45,29 +45,54 @@ function appendMsg(role, text) {
 }
 
 // Send message
+// Send message
 async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
 
   if (!text) return;
 
+  // Show user message on screen
   appendMsg('user', text);
   input.value = '';
 
+  // Show a temporary "Bot is thinking..." message (optional but good UX)
+  const typingId = 'typing-' + Date.now();
+  appendMsg('bot', '<div class="typing-indicator"><span></span><span></span><span></span></div>');
+  
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // 1. Point exactly to your local FastAPI server
+    const response = await fetch('http://localhost:8000/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4',
-        messages: [{ role: 'user', content: text }]
-      })
+      body: JSON.stringify({ message: text })
     });
 
     const data = await response.json();
-    appendMsg('bot', data?.content || "Error");
+    
+    // Remove the typing indicator (by removing the last added message)
+    const msgs = document.getElementById('messages');
+    msgs.lastChild.remove();
 
-  } catch {
-    appendMsg('bot', "Connection error");
+    // 2. Format the bot's reply and the sources
+    let finalHtml = data.reply;
+    
+    // If the backend sent sources, format them nicely at the bottom of the bubble
+    if (data.sources && data.sources.length > 0) {
+        finalHtml += "<br><br><b>📚 Sources:</b><ul>";
+        data.sources.forEach(source => {
+            finalHtml += `<li><span class="tag">${source}</span></li>`;
+        });
+        finalHtml += "</ul>";
+    }
+
+    // Append the final formatted answer to the chat UI
+    appendMsg('bot', finalHtml);
+
+  } catch (error) {
+    console.error("Backend Error:", error);
+    const msgs = document.getElementById('messages');
+    msgs.lastChild.remove(); // Remove typing indicator
+    appendMsg('bot', "⚠️ Cannot connect to the Arogya Server. Please ensure Python is running.");
   }
 }
