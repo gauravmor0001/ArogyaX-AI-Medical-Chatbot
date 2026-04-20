@@ -75,7 +75,8 @@ system_prompt = (
     "1. Never say 'According to the context' or 'The text states'. State facts directly. "
     "2. If the question is not medical, say: please ask questions related to healthcare. "
     "3. If the answer is not in the excerpts, say: I cannot answer this based on my medical database. "
-    "4. Do not guess or provide outside medical advice.\n\n"
+    "4. Do not guess or provide outside medical advice."
+   "5. Format your response using clean Markdown. Use bullet points for lists, bold text for key terms, and clear paragraph breaks. Never output a single giant wall of text.\n\n"
     "Textbook Excerpts:\n{context}"
 )
 

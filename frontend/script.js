@@ -260,26 +260,24 @@ function removeAttachedImage() {
 // ─────────────────────────────────────────────
 // APPEND MESSAGE
 // ─────────────────────────────────────────────
-function appendMsg(role, html, imageUrl) {
-  const msgs    = document.getElementById('messages');
-  const wrapper = document.createElement('div');
-  wrapper.className = `msg ${role}`;
-
-  const avatarLabel = role === 'bot' ? 'A' : 'U';
-  const avatarClass = role === 'bot' ? 'bot' : 'user-av';
-
-  let imgHtml = '';
-  if (imageUrl) {
-    imgHtml = `<img src="${imageUrl}" alt="attached image"/><div class="img-caption">Attached image</div>`;
+function appendMsg(role, text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  
+  // 👉 NEW: If it's the bot, parse the markdown. If it's the user, keep it as plain text.
+  let formattedText = text;
+  if (role === 'bot') {
+    // marked.parse() turns LLM markdown into beautiful HTML lists and bold tags
+    formattedText = marked.parse(text); 
   }
-
-  wrapper.innerHTML = `
-    <div class="avatar ${avatarClass}">${avatarLabel}</div>
-    <div class="bubble">${imgHtml}${html}</div>`;
-
-  msgs.appendChild(wrapper);
-  scrollToBottom();
-  return wrapper;
+  
+  div.innerHTML = `<div class="bubble">${formattedText}</div>`;
+  msgs.appendChild(div);
+  
+  // Auto-scroll to the bottom when a new message appears
+  msgs.scrollTop = msgs.scrollHeight; 
+  return div;
 }
 
 function appendTyping() {
@@ -393,3 +391,38 @@ document.getElementById('reportPanel').addEventListener('click', function(e) {
 document.getElementById('uploadModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
+
+// Automatically greet the user when the page loads
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    // We use a little markdown here to make it look great!
+    const greetingText = "Hello! There. \n\nFeel free to ask me about any disease, symptoms, or cure.";
+    
+    appendMsg('bot', greetingText);
+  }, 300);
+});
+
+
+// ─────────────────────────────────────────────
+// WELCOME → CHAT TRANSITION
+// ─────────────────────────────────────────────
+function hideWelcome() {
+  if (!chatStarted) {
+    chatStarted = true;
+    
+    const homeView = document.getElementById('homeView');
+    const chatView = document.getElementById('chatView');
+
+    // Fade out the home screen
+    homeView.style.opacity = '0';
+    
+    setTimeout(() => {
+      // Hide home completely and show chat view
+      homeView.classList.add('hidden');
+      chatView.classList.remove('hidden');
+      
+      // Auto-scroll to ensure the initial bot greeting is in view
+      scrollToBottom();
+    }, 300);
+  }
+}

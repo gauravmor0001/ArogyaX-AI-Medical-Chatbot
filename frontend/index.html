@@ -9,7 +9,6 @@
 </head>
 <body>
 
-<!-- ── HEADER ── -->
 <header id="appHeader">
   <div class="logo">
     <div class="logo-icon">
@@ -22,8 +21,7 @@
   </div>
 
   <div class="header-center" id="headerMode">
-    <!-- Mode pill shows in chat mode -->
-  </div>
+    </div>
 
   <div class="header-right">
     <div class="header-badge">
@@ -33,22 +31,17 @@
   </div>
 </header>
 
-<!-- ── DISCLAIMER ── -->
 <div class="disclaimer">
   <svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2z"/></svg>
   For informational purposes only. Always consult a qualified healthcare professional.
 </div>
 
-<!-- ── MAIN CHAT AREA ── -->
-<div class="chat-wrap" id="chatWrap">
-
-  <!-- WELCOME SCREEN (shown on fresh load) -->
+<div id="homeView" class="view-section">
   <div class="welcome-screen" id="welcomeScreen">
     <div class="welcome-inner">
       <div class="welcome-greeting">Namaste, I'm ArogyaX</div>
       <div class="welcome-sub">Where should we start?</div>
 
-      <!-- Mode Cards — like Gemini's action pills -->
       <div class="mode-cards">
         <div class="mode-card" id="chatModeCard" onclick="selectMode('chat')">
           <div class="mode-card-icon">
@@ -73,7 +66,6 @@
         </div>
       </div>
 
-      <!-- Quick chips below -->
       <div class="quick-chips" id="quickChips">
         <button class="chip" onclick="sendChip('What are common symptoms of dengue fever?')">🦟 Dengue symptoms</button>
         <button class="chip" onclick="sendChip('How to manage Type 2 diabetes with diet?')">🩸 Diabetes & diet</button>
@@ -82,13 +74,50 @@
       </div>
     </div>
   </div>
+</div>
 
-  <!-- MESSAGES -->
-  <div class="messages" id="messages"></div>
+<div id="chatView" class="view-section hidden">
+  
+  <div class="chat-wrap" id="chatWrap">
+    <div class="messages" id="messages"></div>
+  </div>
+
+  <div class="input-area" id="inputArea">
+    <div class="preview-strip" id="previewStrip"></div>
+
+    <div class="report-context-pill" id="reportContextPill">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <span id="reportPillName">report.pdf</span>
+      <button onclick="exitReportMode()" title="Remove report">✕</button>
+    </div>
+
+    <div class="input-row">
+      <button class="icon-btn" onclick="openModal()" title="Attach image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </button>
+
+      <textarea id="msgInput"
+        placeholder="Ask a health question…"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"></textarea>
+
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
+    <div class="input-hint">ArogyaX can make mistakes. Verify with a doctor.</div>
+  </div>
 
 </div>
 
-<!-- ── REPORT UPLOAD PANEL (slides in when report mode selected) ── -->
+
 <div class="report-panel" id="reportPanel">
   <div class="report-panel-inner">
     <div class="report-panel-title">
@@ -126,7 +155,6 @@
   </div>
 </div>
 
-<!-- ── IMAGE MODAL ── -->
 <div class="upload-modal-overlay" id="uploadModal">
   <div class="upload-modal">
     <h3>Attach Medical Image</h3>
@@ -147,45 +175,10 @@
   </div>
 </div>
 
-<!-- ── INPUT AREA ── -->
-<div class="input-area" id="inputArea">
-  <div class="preview-strip" id="previewStrip"></div>
-
-  <!-- Report mode context pill -->
-  <div class="report-context-pill" id="reportContextPill">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-    </svg>
-    <span id="reportPillName">report.pdf</span>
-    <button onclick="exitReportMode()" title="Remove report">✕</button>
-  </div>
-
-  <div class="input-row">
-    <button class="icon-btn" onclick="openModal()" title="Attach image">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-        <polyline points="21 15 16 10 5 21"/>
-      </svg>
-    </button>
-
-    <textarea id="msgInput"
-      placeholder="Ask a health question…"
-      onkeydown="handleKey(event)"
-      oninput="autoResize(this)"></textarea>
-
-    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-    </button>
-  </div>
-
-  <div class="input-hint">ArogyaX can make mistakes. Verify with a doctor.</div>
-</div>
-
-<!-- Hidden file inputs -->
 <input type="file" id="reportFileInput" accept=".pdf,image/*" onchange="reportFileSelected(this)"/>
 <input type="file" id="docFileInput" accept=".pdf"/>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
