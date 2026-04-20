@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arogya — Medical AI</title>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4M12 16h.01"/></svg>
+    </div>
+    <div class="logo-text">Arog<span>ya</span></div>
+  </div>
+  <div class="header-badge">
+    <div class="pulse"></div>
+    AI Medical Assistant
+  </div>
+</header>
+
+<div class="disclaimer">
+  <svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2z"/></svg>
+  For informational purposes only. Always consult a qualified healthcare professional.
+</div>
+
+<div class="chat-wrap" id="chatWrap">
+  <div class="welcome" id="welcome">
+    <div class="welcome-icon">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61..."/></svg>
+    </div>
+    <h1>Namaste, I'm Arogya</h1>
+    <p>Your AI health companion.</p>
+    <div class="quick-chips">
+      <div class="chip" onclick="sendChip('What are common symptoms of dengue fever?')">Dengue symptoms</div>
+    </div>
+  </div>
+  <div class="messages" id="messages"></div>
+</div>
+
+<!-- Modal -->
+<div class="upload-modal-overlay" id="uploadModal">
+  <div class="upload-modal">
+    <h3>Attach Medical Image</h3>
+    <img class="modal-preview" id="modalPreview"/>
+    <div class="upload-zone" id="uploadZone"></div>
+    <input type="file" id="modalFileInput" accept="image/*"/>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button id="attachBtn" onclick="attachImage()">Attach</button>
+    </div>
+  </div>
+</div>
+
+<!-- Input -->
+<div class="input-area">
+  <div class="preview-strip" id="previewStrip"></div>
+
+  <div class="input-row">
+    <textarea id="msgInput"
+      placeholder="Ask a health question…"
+      onkeydown="handleKey(event)"
+      oninput="autoResize(this)"></textarea>
+
+    <div class="input-actions">
+      <button onclick="openModal()">📷</button>
+      <button id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <input type="file" id="docFileInput"/>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
